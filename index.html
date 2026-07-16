@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskVerify Pro - Verificador de Cumplimiento (Tema Claro)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            slate: {
+              50: '#f8fafc',
+              100: '#f1f5f9',
+              200: '#e2e8f0',
+              300: '#cbd5e1',
+              400: '#94a3b8',
+              500: '#64748b',
+              600: '#475569',
+              700: '#334155',
+              800: '#1e293b',
+              850: '#ffffff', // Modificado a blanco puro para diseño claro tipo tarjeta
+              900: '#0f172a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Estilización de barras de desplazamiento claras */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f8fafc;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-700 font-sans flex flex-col antialiased">
+
+  <!-- BANNER DE NOTIFICACIÓN DINÁMICO -->
+  <div id="notification-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ENCABEZADO PRINCIPAL -->
+  <header class="border-b border-slate-200 bg-white/90 backdrop-blur sticky top-0 z-40 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Logo y Título -->
+      <div class="flex items-center gap-3">
+        <div class="bg-indigo-600 p-2.5 rounded-xl text-white shadow-lg shadow-indigo-600/10">
+          <i data-lucide="check-square" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-600 bg-clip-text text-transparent">
+            TaskVerify Pro
+          </h1>
+          <p class="text-xs text-slate-500 font-medium">Control de Avances y Cumplimiento de Proyectos</p>
+        </div>
+      </div>
+
+      <!-- Selector de Proyecto y Botón de Creación -->
+      <div class="flex items-center gap-2">
+        <div class="relative">
+          <select id="project-selector" class="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 pr-8 appearance-none cursor-pointer font-medium shadow-sm hover:border-slate-300 transition-colors">
+            <!-- Se llena dinámicamente -->
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-450">
+            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-500"></i>
+          </div>
+        </div>
+
+        <button onclick="openModal('new-project-modal')" class="bg-white hover:bg-slate-50 text-indigo-600 border border-slate-200 p-2 rounded-xl shadow-sm transition duration-150" title="Nuevo Proyecto">
+          <i data-lucide="plus" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ÁREA PRINCIPAL DE CONTENIDO -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
+    
+    <!-- TARJETA DEL PROYECTO ACTIVO -->
+    <section class="bg-gradient-to-r from-white via-slate-50/50 to-indigo-50/20 p-6 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden">
+      <div class="absolute top-0 right-0 p-4 opacity-[0.03] pointer-events-none text-slate-900">
+        <i data-lucide="briefcase" class="w-40 h-40"></i>
+      </div>
+      <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <span class="text-xs font-semibold tracking-wider text-indigo-600 uppercase bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100/50">
+            Proyecto Activo
+          </span>
+          <h2 id="project-title" class="text-2xl font-extrabold text-slate-800 mt-2 mb-1">Cargando...</h2>
+          <p id="project-desc" class="text-slate-600 text-sm max-w-2xl">Cargando descripción del proyecto...</p>
+        </div>
+        
+        <button id="delete-project-btn" onclick="deleteCurrentProject()" class="self-start md:self-center flex items-center gap-2 text-xs font-semibold text-rose-600 hover:text-rose-500 bg-rose-50 hover:bg-rose-100/70 px-3.5 py-2 rounded-xl border border-rose-100 transition hidden">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          Eliminar Proyecto
+        </button>
+      </div>
+    </section>
+
+    <!-- TABLERO DE MÉTRICAS (KPIs) -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      
+      <!-- Progreso General -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Progreso Ponderado</p>
+          <h3 id="metric-progress-text" class="text-2xl font-extrabold text-slate-800 mt-1">0%</h3>
+          <div class="w-28 sm:w-36 bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
+            <div id="metric-progress-bar" class="bg-indigo-600 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+        </div>
+        <div class="bg-indigo-50 p-3 rounded-xl text-indigo-600 border border-indigo-100/40">
+          <i data-lucide="trending-up" class="w-6 h-6"></i>
+        </div>
+      </div>
+
+      <!-- Tareas Vencidas -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tareas Atrasadas</p>
+          <h3 id="metric-overdue" class="text-2xl font-extrabold text-slate-800 mt-1">0</h3>
+          <p class="text-xs text-slate-500 mt-2">Incompletas fuera de plazo</p>
+        </div>
+        <div id="metric-overdue-icon-bg" class="p-3 rounded-xl bg-slate-50 text-slate-400 border border-slate-100">
+          <i data-lucide="alert-circle" class="w-6 h-6"></i>
+        </div>
+      </div>
+
+      <!-- Tareas Completadas -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Completadas (100%)</p>
+          <h3 id="metric-completed" class="text-2xl font-extrabold text-emerald-600 mt-1">0 <span class="text-xs text-slate-400 font-normal">/ 0</span></h3>
+          <p class="text-xs text-slate-500 mt-2">Entregas consolidadas</p>
+        </div>
+        <div class="bg-emerald-50 p-3 rounded-xl text-emerald-600 border border-emerald-100/30">
+          <i data-lucide="check-circle" class="w-6 h-6"></i>
+        </div>
+      </div>
+
+      <!-- Fórmula SLA -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Fórmula de Cumplimiento</p>
+          <h3 class="text-sm font-bold text-slate-700 mt-1">SLA Ponderado</h3>
+          <p class="text-xs text-slate-500 mt-1.5 flex items-center gap-1">
+            <i data-lucide="info" class="w-3.5 h-3.5 text-indigo-500 flex-shrink-0"></i>
+            Penaliza retrasos y vencidas.
+          </p>
+        </div>
+        <div class="bg-indigo-50 p-3 rounded-xl text-indigo-600 border border-indigo-100/40">
+          <i data-lucide="bar-chart-3" class="w-6 h-6"></i>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- CUMPLIMIENTO POR INTEGRANTE -->
+    <section class="space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="users" class="w-5 h-5 text-indigo-600"></i>
+          <h3 class="text-lg font-bold text-slate-800">Cumplimiento por Integrante</h3>
+        </div>
+        <button onclick="openModal('new-member-modal')" class="flex items-center gap-2 text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100/70 px-4 py-2.5 rounded-xl border border-indigo-100 transition shadow-sm">
+          <i data-lucide="user-plus" class="w-4 h-4"></i>
+          Agregar Miembro
+        </button>
+      </div>
+
+      <!-- Tarjetas de Miembros -->
+      <div id="members-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Generado por JS -->
+      </div>
+    </section>
+
+    <!-- LISTADO Y FILTRADO DE TAREAS -->
+    <section class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+      
+      <!-- Cabecera de la sección -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+        <div>
+          <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <i data-lucide="check-square" class="w-5 h-5 text-indigo-600"></i>
+            Listado de Tareas y Línea de Tiempo
+          </h3>
+          <p class="text-xs text-slate-500">Gestiona entregas, reporta avances y visualiza motivos de posibles demoras en el historial.</p>
+        </div>
+        
+        <button onclick="openModal('new-task-modal')" class="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md shadow-indigo-600/10 transition">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          Nueva Tarea
+        </button>
+      </div>
+
+      <!-- Controles de Filtros -->
+      <div class="flex flex-wrap items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-150">
+        <div class="flex items-center gap-2 text-xs text-slate-500 font-bold mr-2">
+          <i data-lucide="filter" class="w-3.5 h-3.5 text-slate-400"></i>
+          Filtrar por:
+        </div>
+
+        <!-- Filtro Responsable -->
+        <select id="filter-member" onchange="applyFilters()" class="bg-white border border-slate-200 rounded-lg text-xs text-slate-600 px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer shadow-sm">
+          <option value="all">Todos los miembros</option>
+        </select>
+
+        <!-- Filtro Estado -->
+        <select id="filter-status" onchange="applyFilters()" class="bg-white border border-slate-200 rounded-lg text-xs text-slate-600 px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer shadow-sm">
+          <option value="all">Todos los estados</option>
+          <option value="pending">Pendiente</option>
+          <option value="in_progress">En Progreso</option>
+          <option value="review">En Revisión</option>
+          <option value="completed">Completada</option>
+        </select>
+
+        <!-- Filtro Prioridad -->
+        <select id="filter-priority" onchange="applyFilters()" class="bg-white border border-slate-200 rounded-lg text-xs text-slate-600 px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer shadow-sm">
+          <option value="all">Todas las prioridades</option>
+          <option value="high">Alta</option>
+          <option value="medium">Media</option>
+          <option value="low">Baja</option>
+        </select>
+
+        <!-- Limpiar filtros -->
+        <button id="reset-filters" onclick="resetFilters()" class="text-xs text-indigo-600 hover:text-indigo-700 font-semibold transition underline pl-2 hidden">
+          Restablecer filtros
+        </button>
+      </div>
+
+      <!-- Listado o Vacío -->
+      <div id="tasks-container">
+        <!-- Generado por JS -->
+      </div>
+
+    </section>
+  </main>
+
+  <!-- PIE DE PÁGINA -->
+  <footer class="border-t border-slate-200 mt-auto bg-slate-100/50">
+    <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 text-center sm:flex sm:justify-between sm:items-center">
+      <p class="text-xs text-slate-500">&copy; 2026 TaskVerify Pro. Todos los derechos reservados.</p>
+      <p class="text-xs text-slate-500 mt-2 sm:mt-0 flex items-center justify-center gap-1.5">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        Simulación de Cumplimiento Activa (Fecha de control: 2026-07-15)
+      </p>
+    </div>
+  </footer>
+
+  <!-- ================= MODALES DE REGISTRO / CREACIÓN / EDICIÓN (TODOS CLAROS) ================= -->
+
+  <!-- 1. Modal: Nuevo Proyecto -->
+  <div id="new-project-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm hidden">
+    <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 relative shadow-2xl">
+      <button onclick="closeModal('new-project-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-50 transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+      
+      <h3 class="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
+        <i data-lucide="layers" class="text-indigo-600 w-5 h-5"></i>
+        Nuevo Proyecto
+      </h3>
+      <p class="text-xs text-slate-500 mb-5">Define una nueva meta o área de trabajo para tu equipo.</p>
+
+      <form onsubmit="handleCreateProject(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">Nombre del Proyecto *</label>
+          <input
+            type="text"
+            id="new-project-name"
+            required
+            placeholder="Ej: Migración Cloud Q3"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-shadow"
+          >
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">Descripción o Propósito</label>
+          <textarea
+            id="new-project-desc"
+            rows="3"
+            placeholder="Describe brevemente los objetivos del proyecto..."
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 resize-none transition-shadow"
+          ></textarea>
+        </div>
+
+        <div class="flex gap-2.5 pt-3">
+          <button type="button" onclick="closeModal('new-project-modal')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2.5 rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-md shadow-indigo-600/10">
+            Crear Proyecto
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. Modal: Nuevo Miembro -->
+  <div id="new-member-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm hidden">
+    <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 relative shadow-2xl">
+      <button onclick="closeModal('new-member-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-50 transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+      
+      <h3 class="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
+        <i data-lucide="user-plus" class="text-indigo-600 w-5 h-5"></i>
+        Nuevo Miembro de Equipo
+      </h3>
+      <p class="text-xs text-slate-500 mb-5">Integra un profesional para asignarle responsabilidades.</p>
+
+      <form onsubmit="handleCreateMember(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">Nombre Completo *</label>
+          <input
+            type="text"
+            id="new-member-name"
+            required
+            placeholder="Ej: Andrea Gómez"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-shadow"
+          >
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">Rol / Cargo *</label>
+          <input
+            type="text"
+            id="new-member-role"
+            required
+            placeholder="Ej: Developer Backend"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-shadow"
+          >
+        </div>
+
+        <div class="flex gap-2.5 pt-3">
+          <button type="button" onclick="closeModal('new-member-modal')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2.5 rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-md shadow-indigo-600/10">
+            Integrar Miembro
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Modal: Editar Miembro -->
+  <div id="edit-member-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm hidden">
+    <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 relative shadow-2xl">
+      <button onclick="closeModal('edit-member-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-50 transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+      
+      <h3 class="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
+        <i data-lucide="user-cog" class="text-indigo-600 w-5 h-5"></i>
+        Editar Miembro de Equipo
+      </h3>
+      <p class="text-xs text-slate-500 mb-5">Actualiza los datos del profesional seleccionado.</p>
+
+      <form onsubmit="handleEditMember(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">Nombre Completo *</label>
+          <input
+            type="text"
+            id="edit-member-name"
+            required
+            placeholder="Ej: Andrea Gómez"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-shadow"
+          >
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">Rol / Cargo *</label>
+          <input
+            type="text"
+            id="edit-member-role"
+            required
+            placeholder="Ej: Developer Backend"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-shadow"
+          >
+        </div>
+
+        <div class="flex gap-2.5 pt-3">
+          <button type="button" onclick="closeModal('edit-member-modal')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2.5 rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-md shadow-indigo-600/10">
+            Guardar Cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. Modal: Confirmación para Quitar Miembro -->
+  <div id="confirm-delete-member-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm hidden">
+    <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 relative shadow-2xl">
+      <div class="flex items-center gap-3 mb-3 text-rose-600">
+        <div class="bg-rose-50 p-2 rounded-xl border border-rose-100">
+          <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-lg font-extrabold text-slate-850">¿Quitar Integrante?</h3>
+      </div>
+      <p class="text-xs text-slate-600 leading-relaxed mb-5">
+        Esta acción removerá permanentemente al miembro de tu lista. Todas las tareas actualmente asignadas a este usuario pasarán a estar <span class="text-amber-600 font-bold">"Sin asignar"</span> en lugar de borrarse, permitiéndote reubicarlas.
+      </p>
+
+      <div class="flex gap-2.5 pt-2">
+        <button type="button" onclick="closeModal('confirm-delete-member-modal')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2.5 rounded-xl transition">
+          Cancelar
+        </button>
+        <button type="button" onclick="confirmDeleteMember()" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-lg shadow-rose-600/10">
+          Sí, Quitar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Modal: Nueva Tarea -->
+  <div id="new-task-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm hidden">
+    <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 relative shadow-2xl">
+      <button onclick="closeModal('new-task-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-50 transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+      
+      <h3 class="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
+        <i data-lucide="check-square" class="text-indigo-600 w-5 h-5"></i>
+        Asignar Nueva Tarea
+      </h3>
+      <p class="text-xs text-slate-500 mb-5">El progreso general del proyecto se calcula dinámicamente según el avance de cada tarea.</p>
+
+      <form onsubmit="handleCreateTask(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">Título de Tarea *</label>
+          <input
+            type="text"
+            id="new-task-title"
+            required
+            placeholder="Ej: Diseñar Base de Datos"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-shadow"
+          >
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">Descripción de Tarea</label>
+          <textarea
+            id="new-task-desc"
+            rows="2"
+            placeholder="Instrucciones específicas..."
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 resize-none transition-shadow"
+          ></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1.5">Asignar a *</label>
+            <select
+              id="new-task-assigned"
+              required
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-shadow"
+            >
+              <!-- Llenado dinámico -->
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1.5">Prioridad</label>
+            <select
+              id="new-task-priority"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-shadow"
+            >
+              <option value="low">Baja</option>
+              <option value="medium" selected>Media</option>
+              <option value="high">Alta</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">Fecha de Entrega (SLA) *</label>
+          <input
+            type="date"
+            id="new-task-duedate"
+            required
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-shadow"
+          >
+        </div>
+
+        <div class="flex gap-2.5 pt-3">
+          <button type="button" onclick="closeModal('new-task-modal')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2.5 rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-md shadow-indigo-600/10">
+            Asignar Tarea
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 6. Modal: Reportar Avance y Registro de Retrasos -->
+  <div id="report-progress-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm hidden">
+    <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 relative shadow-2xl">
+      <button onclick="closeModal('report-progress-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-50 transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+      
+      <h3 class="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
+        <i data-lucide="clipboard-check" class="text-indigo-600 w-5 h-5"></i>
+        Reportar Avance de Tarea
+      </h3>
+      <p id="report-task-subtitle" class="text-xs text-slate-500 mb-5">Cargando datos de la tarea...</p>
+
+      <form onsubmit="handleReportProgress(event)" class="space-y-4">
+        <!-- Input Fecha de Reporte -->
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">Fecha del Reporte</label>
+          <input
+            type="date"
+            id="report-date"
+            required
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-shadow"
+          >
+        </div>
+
+        <!-- Porcentaje de Progreso -->
+        <div>
+          <div class="flex justify-between items-center mb-1.5">
+            <label class="block text-xs font-bold text-slate-600">Porcentaje de Progreso *</label>
+            <span id="progress-val-display" class="text-sm font-bold text-indigo-600">50%</span>
+          </div>
+          <input
+            type="range"
+            id="report-progress"
+            min="0"
+            max="100"
+            step="5"
+            value="50"
+            oninput="updateProgressSliderDisplay(this.value)"
+            class="w-full accent-indigo-600 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+          >
+          <div class="flex justify-between text-[10px] text-slate-500 px-1 mt-1 font-bold">
+            <span>0% (Sin iniciar)</span>
+            <span>50% (A mitad)</span>
+            <span>100% (Completada)</span>
+          </div>
+        </div>
+
+        <!-- Comentario de Avance -->
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">Comentarios de Avance *</label>
+          <textarea
+            id="report-comment"
+            required
+            rows="2"
+            placeholder="Describe qué avances has hecho o qué has completado..."
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 resize-none transition-shadow"
+          ></textarea>
+        </div>
+
+        <!-- Campo Dinámico: Motivo del Retraso -->
+        <div id="delay-reason-container" class="bg-rose-50 border border-rose-100 p-3.5 rounded-xl hidden">
+          <div class="flex items-center gap-2 text-xs font-bold text-rose-600 mb-1.5">
+            <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+            <span>¡Alerta! Tarea Fuera de Plazo</span>
+          </div>
+          <p class="text-[11px] text-rose-700/80 mb-2">Dado que la fecha de entrega ha expirado y la tarea no está terminada (100%), por favor detalla las razones del retraso o bloqueos actuales:</p>
+          <textarea
+            id="report-delay-reason"
+            rows="2"
+            placeholder="Ej: Dependencia técnica con API externa / Falta de aprobación de diseños..."
+            class="w-full bg-white border border-rose-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-rose-400 resize-none"
+          ></textarea>
+        </div>
+
+        <div class="flex gap-2.5 pt-2">
+          <button type="button" onclick="closeModal('report-progress-modal')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2.5 rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-md shadow-indigo-600/10">
+            Guardar Reporte
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- LÓGICA DE APLICACIÓN (VANILLA JS) -->
+  <script>
+    // --- ESTADO GLOBAL INICIAL ---
+    let projects = [
+      { id: 'p1', name: 'Rediseño de Plataforma Web', description: 'Renovación completa del frontend y experiencia de usuario para clientes.' },
+      { id: 'p2', name: 'Lanzamiento Campaña Q3', description: 'Estrategia de marketing digital y posicionamiento de marca.' }
+    ];
+
+    let members = [
+      { id: 'm1', name: 'Sofía Alvarenga', role: 'UI/UX Designer', color: 'bg-indigo-500', avatar: 'SA' },
+      { id: 'm2', name: 'Carlos Mendoza', role: 'Frontend Developer', color: 'bg-emerald-500', avatar: 'CM' },
+      { id: 'm3', name: 'Elena Rostrán', role: 'QA Engineer', color: 'bg-amber-500', avatar: 'ER' },
+      { id: 'm4', name: 'Mateo Portillo', role: 'Product Manager', color: 'bg-rose-500', avatar: 'MP' }
+    ];
+
+    let tasks = [
+      // Proyecto 1
+      { 
+        id: 't1', 
+        projectId: 'p1', 
+        title: 'Crear Wireframes del Dashboard', 
+        description: 'Diseñar la estructura inicial y flujos de navegación principales.', 
+        assignedTo: 'm1', 
+        status: 'completed', 
+        priority: 'high', 
+        dueDate: '2026-07-10', 
+        completedOnTime: true,
+        progress: 100,
+        history: [
+          { id: 'h1_1', date: '2026-07-05', progress: 40, comment: 'Bocetos iniciales terminados en papel.', delayReason: '' },
+          { id: 'h1_2', date: '2026-07-10', progress: 100, comment: 'Wireframes interactivos finales listos y validados con el PM.', delayReason: '' }
+        ]
+      },
+      { 
+        id: 't2', 
+        projectId: 'p1', 
+        title: 'Implementar Maquetación en Tailwind', 
+        description: 'Traducir los diseños aprobados a código HTML/CSS responsivo.', 
+        assignedTo: 'm2', 
+        status: 'in_progress', 
+        priority: 'high', 
+        dueDate: '2026-07-20', 
+        completedOnTime: null,
+        progress: 60,
+        history: [
+          { id: 'h2_1', date: '2026-07-13', progress: 60, comment: 'Estructura de login y vistas básicas completadas con Tailwind CSS.', delayReason: '' }
+        ]
+      },
+      { 
+        id: 't3', 
+        projectId: 'p1', 
+        title: 'Escribir Pruebas Unitarias', 
+        description: 'Configurar suite de pruebas y alcanzar el 80% de cobertura.', 
+        assignedTo: 'm3', 
+        status: 'pending', 
+        priority: 'medium', 
+        dueDate: '2026-07-25', 
+        completedOnTime: null,
+        progress: 0,
+        history: []
+      },
+      { 
+        id: 't4', 
+        projectId: 'p1', 
+        title: 'Definir Historias de Usuario', 
+        description: 'Redactar criterios de aceptación para el sprint entrante.', 
+        assignedTo: 'm4', 
+        status: 'completed', 
+        priority: 'low', 
+        dueDate: '2026-07-05', 
+        completedOnTime: true,
+        progress: 100,
+        history: [
+          { id: 'h4_1', date: '2026-07-04', progress: 100, comment: 'Todas las historias redactadas e ingresadas en el backlog.', delayReason: '' }
+        ]
+      },
+      { 
+        id: 't5', 
+        projectId: 'p1', 
+        title: 'Ajustar Paleta de Colores y Tipografía', 
+        description: 'Optimizar el contraste para accesibilidad WCAG AA.', 
+        assignedTo: 'm1', 
+        status: 'review', 
+        priority: 'medium', 
+        dueDate: '2026-07-14', 
+        completedOnTime: null,
+        progress: 90,
+        history: [
+          { id: 'h5_1', date: '2026-07-12', progress: 50, comment: 'Primer set de tipografías cargado.', delayReason: '' },
+          { id: 'h5_2', date: '2026-07-14', progress: 90, comment: 'Ajustada la paleta contrastada. En revisión por el equipo de diseño corporativo.', delayReason: '' }
+        ]
+      },
+      { 
+        id: 't6', 
+        projectId: 'p1', 
+        title: 'Optimizar Carga de Imágenes', 
+        description: 'Implementar compresión y carga diferida (lazy loading).', 
+        assignedTo: 'm2', 
+        status: 'completed', 
+        priority: 'low', 
+        dueDate: '2026-07-12', 
+        completedOnTime: false, // Completado tarde
+        progress: 100,
+        history: [
+          { id: 'h6_1', date: '2026-07-11', progress: 40, comment: 'Configurados scripts iniciales de compresión.', delayReason: '' },
+          { id: 'h6_2', date: '2026-07-14', progress: 100, comment: 'Librerías añadidas y compresión finalizada. Se entregó 2 días después por fallos en CDN.', delayReason: 'El CDN corporativo estuvo inestable el fin de semana del 12, impidiendo subir las pruebas.' }
+        ]
+      },
+
+      // Proyecto 2
+      { 
+        id: 't7', 
+        projectId: 'p2', 
+        title: 'Análisis de Palabras Clave SEO', 
+        description: 'Identificar términos de búsqueda de alto volumen y baja competencia.', 
+        assignedTo: 'm4', 
+        status: 'completed', 
+        priority: 'high', 
+        dueDate: '2026-07-08', 
+        completedOnTime: true,
+        progress: 100,
+        history: [
+          { id: 'h7_1', date: '2026-07-08', progress: 100, comment: 'Análisis terminado y guardado en excel corporativo.', delayReason: '' }
+        ]
+      },
+      { 
+        id: 't8', 
+        projectId: 'p2', 
+        title: 'Diseñar Copys para Redes Sociales', 
+        description: 'Redactar los textos creativos para Facebook, LinkedIn e Instagram.', 
+        assignedTo: 'm1', 
+        status: 'in_progress', 
+        priority: 'medium', 
+        dueDate: '2026-07-18', 
+        completedOnTime: null,
+        progress: 30,
+        history: [
+          { id: 'h8_1', date: '2026-07-14', progress: 30, comment: 'Primer borrador para LinkedIn redactado.', delayReason: '' }
+        ]
+      },
+      { 
+        id: 't9', 
+        projectId: 'p2', 
+        title: 'Configurar Campaña de Google Ads', 
+        description: 'Definir presupuestos, audiencias y segmentaciones geográficas.', 
+        assignedTo: 'm3', 
+        status: 'pending', 
+        priority: 'high', 
+        dueDate: '2026-07-15', 
+        completedOnTime: null,
+        progress: 0,
+        history: []
+      }
+    ];
+
+    const todayStr = '2026-07-15'; // Fecha simulada de control de SLAs
+
+    // --- VARIABLES DE CONTROL/EDICIÓN ---
+    let currentProjectId = 'p1';
+    let filterMember = 'all';
+    let filterStatus = 'all';
+    let filterPriority = 'all';
+
+    let memberIdToEdit = null;
+    let memberIdToDelete = null;
+    let taskIdToReport = null;
+
+    // Control de colapsables de líneas de tiempo de tareas
+    let expandedTimelines = {};
+
+    // --- NOTIFICACIONES ---
+    function triggerNotification(message, type = 'success') {
+      const container = document.getElementById('notification-container');
+      const toast = document.createElement('div');
+      toast.className = `flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border transition-all transform duration-300 translate-y-2 opacity-0 pointer-events-auto ${
+        type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' :
+        type === 'info' ? 'bg-slate-50 border-slate-200 text-slate-700' :
+        'bg-white border-emerald-300 text-slate-800 shadow-emerald-100/30'
+      }`;
+
+      const icon = type === 'error' ? 'alert-circle' : 'sparkles';
+      toast.innerHTML = `
+        <div class="p-1 rounded-full ${type === 'error' ? 'bg-rose-50' : 'bg-emerald-50'}">
+          <i data-lucide="${icon}" class="w-5 h-5 ${type === 'error' ? 'text-rose-600' : 'text-emerald-600'}"></i>
+        </div>
+        <span class="text-sm font-semibold">${message}</span>
+      `;
+
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      // Animación entrada
+      setTimeout(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      }, 50);
+
+      // Desvanecimiento y remoción
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-[-10px]');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // --- MODALES (ABRIR / CERRAR) ---
+    function openModal(modalId) {
+      document.getElementById(modalId).classList.remove('hidden');
+    }
+
+    // Cerrar modals de manera genérica
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.add('hidden');
+    }
+
+    // --- MANEJO DE PROYECTOS ---
+    function handleCreateProject(e) {
+      e.preventDefault();
+      const nameInput = document.getElementById('new-project-name');
+      const descInput = document.getElementById('new-project-desc');
+
+      if (!nameInput.value.trim()) return;
+
+      const id = 'p_' + Date.now();
+      const newProj = {
+        id: id,
+        name: nameInput.value.trim(),
+        description: descInput.value.trim() || 'Sin descripción'
+      };
+
+      projects.push(newProj);
+      currentProjectId = id;
+
+      // Reset y render
+      nameInput.value = '';
+      descInput.value = '';
+      closeModal('new-project-modal');
+      
+      triggerNotification(`Proyecto "${newProj.name}" creado correctamente.`);
+      updateProjectSelector();
+      renderApp();
+    }
+
+    function deleteCurrentProject() {
+      if (projects.length <= 1) {
+        triggerNotification('Debe existir al menos un proyecto activo.', 'error');
+        return;
+      }
+      const oldName = projects.find(p => p.id === currentProjectId)?.name || '';
+      projects = projects.filter(p => p.id !== currentProjectId);
+      tasks = tasks.filter(t => t.projectId !== currentProjectId);
+      currentProjectId = projects[0].id;
+
+      triggerNotification(`Proyecto "${oldName}" y sus tareas han sido eliminados.`, 'info');
+      updateProjectSelector();
+      renderApp();
+    }
+
+    // --- MANEJO DE INTEGRANTES (AGREGAR, ACTUALIZAR, QUITAR) ---
+    function handleCreateMember(e) {
+      e.preventDefault();
+      const nameInput = document.getElementById('new-member-name');
+      const roleInput = document.getElementById('new-member-role');
+
+      if (!nameInput.value.trim() || !roleInput.value.trim()) return;
+
+      const colors = ['bg-purple-500', 'bg-pink-500', 'bg-amber-500', 'bg-blue-500', 'bg-teal-500', 'bg-indigo-500'];
+      const randomColor = colors[Math.floor(Math.random() * colors.length)];
+      
+      const initials = nameInput.value
+        .split(' ')
+        .map(n => n[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase();
+
+      const newMem = {
+        id: 'm_' + Date.now(),
+        name: nameInput.value.trim(),
+        role: roleInput.value.trim(),
+        color: randomColor,
+        avatar: initials || '?'
+      };
+
+      members.push(newMem);
+
+      nameInput.value = '';
+      roleInput.value = '';
+      closeModal('new-member-modal');
+
+      triggerNotification(`Miembro "${newMem.name}" integrado al equipo.`);
+      renderApp();
+    }
+
+    // Modal de edición
+    function openEditMemberModal(memberId) {
+      const member = members.find(m => m.id === memberId);
+      if (!member) return;
+
+      memberIdToEdit = memberId;
+      document.getElementById('edit-member-name').value = member.name;
+      document.getElementById('edit-member-role').value = member.role;
+      openModal('edit-member-modal');
+    }
+
+    function handleEditMember(e) {
+      e.preventDefault();
+      const name = document.getElementById('edit-member-name').value.trim();
+      const role = document.getElementById('edit-member-role').value.trim();
+
+      if (!name || !role) return;
+
+      members = members.map(m => {
+        if (m.id === memberIdToEdit) {
+          const initials = name
+            .split(' ')
+            .map(n => n[0])
+            .slice(0, 2)
+            .join('')
+            .toUpperCase();
+          return { ...m, name, role, avatar: initials || '?' };
+        }
+        return m;
+      });
+
+      closeModal('edit-member-modal');
+      triggerNotification('Datos de integrante actualizados.');
+      renderApp();
+    }
+
+    // Modal de eliminación
+    function openDeleteMemberModal(memberId) {
+      memberIdToDelete = memberId;
+      openModal('confirm-delete-member-modal');
+    }
+
+    function confirmDeleteMember() {
+      if (!memberIdToDelete) return;
+
+      const member = members.find(m => m.id === memberIdToDelete);
+      const name = member ? member.name : 'Integrante';
+
+      // Filtrar al integrante del equipo
+      members = members.filter(m => m.id !== memberIdToDelete);
+
+      // Reasignar tareas asignadas a este integrante a "" (Sin asignar)
+      tasks = tasks.map(t => {
+        if (t.assignedTo === memberIdToDelete) {
+          return { ...t, assignedTo: '' };
+        }
+        return t;
+      });
+
+      // Si el integrante eliminado estaba en el filtro de responsables activo, restablecer filtro
+      if (filterMember === memberIdToDelete) {
+        filterMember = 'all';
+        document.getElementById('filter-member').value = 'all';
+      }
+
+      closeModal('confirm-delete-member-modal');
+      triggerNotification(`Se ha retirado a "${name}" del equipo de forma exitosa.`, 'info');
+      renderApp();
+    }
+
+    // --- MANEJO DE TAREAS ---
+    function handleCreateTask(e) {
+      e.preventDefault();
+      const titleInput = document.getElementById('new-task-title');
+      const descInput = document.getElementById('new-task-desc');
+      const assignedSelect = document.getElementById('new-task-assigned');
+      const prioritySelect = document.getElementById('new-task-priority');
+      const dateInput = document.getElementById('new-task-duedate');
+
+      if (!titleInput.value.trim() || !assignedSelect.value || !dateInput.value) {
+        triggerNotification('Por favor, completa los campos obligatorios.', 'error');
+        return;
+      }
+
+      const newTask = {
+        id: 't_' + Date.now(),
+        projectId: currentProjectId,
+        title: titleInput.value.trim(),
+        description: descInput.value.trim() || 'Sin descripción.',
+        assignedTo: assignedSelect.value,
+        status: 'pending',
+        priority: prioritySelect.value,
+        dueDate: dateInput.value,
+        completedOnTime: null,
+        progress: 0,
+        history: []
+      };
+
+      tasks.push(newTask);
+
+      // Reset
+      titleInput.value = '';
+      descInput.value = '';
+      assignedSelect.value = '';
+      prioritySelect.value = 'medium';
+      dateInput.value = '';
+      closeModal('new-task-modal');
+
+      triggerNotification(`Tarea "${newTask.title}" asignada correctamente.`);
+      renderApp();
+    }
+
+    function updateTaskStatus(taskId, newStatus) {
+      tasks = tasks.map(task => {
+        if (task.id === taskId) {
+          let completedOnTime = task.completedOnTime;
+          let progress = task.progress;
+
+          if (newStatus === 'completed') {
+            completedOnTime = task.dueDate >= todayStr;
+            progress = 100;
+          } else if (newStatus === 'pending') {
+            progress = 0;
+            completedOnTime = null;
+          }
+
+          // Crear un registro automático en el historial si cambió radicalmente el estado por dropdown
+          const hasHist = task.history.length > 0;
+          const lastVal = hasHist ? task.history[task.history.length - 1].progress : 0;
+          
+          let updatedHistory = [...task.history];
+          if (progress !== lastVal) {
+            updatedHistory.push({
+              id: 'h_auto_' + Date.now(),
+              date: todayStr,
+              progress: progress,
+              comment: `Cambio de estado automático a través del panel principal.`,
+              delayReason: (progress < 100 && task.dueDate < todayStr) ? 'Cambio de estado manual sin justificar detalles de retraso.' : ''
+            });
+          }
+
+          return { 
+            ...task, 
+            status: newStatus, 
+            completedOnTime, 
+            progress,
+            history: updatedHistory
+          };
+        }
+        return task;
+      });
+      triggerNotification('Estado y avance de tarea actualizados.');
+      renderApp();
+    }
+
+    function deleteTask(taskId) {
+      tasks = tasks.filter(t => t.id !== taskId);
+      triggerNotification('Tarea eliminada del proyecto.', 'info');
+      renderApp();
+    }
+
+    // --- REPORTE DE AVANCES Y TIMELINE ---
+
+    function openReportProgressModal(taskId) {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      taskIdToReport = taskId;
+      
+      // Actualizar datos del modal claro
+      document.getElementById('report-task-subtitle').textContent = `Reportando avance para: "${task.title}"`;
+      document.getElementById('report-date').value = todayStr; // Fecha de reporte simulada
+      document.getElementById('report-progress').value = task.progress;
+      document.getElementById('report-comment').value = '';
+      document.getElementById('report-delay-reason').value = '';
+      
+      updateProgressSliderDisplay(task.progress);
+      evaluateDelayReasonVisibility(task.progress, task.dueDate);
+      
+      openModal('report-progress-modal');
+    }
+
+    function updateProgressSliderDisplay(val) {
+      document.getElementById('progress-val-display').textContent = `${val}%`;
+      
+      // Evaluar dinámicamente si el campo de retraso debe mostrarse
+      const task = tasks.find(t => t.id === taskIdToReport);
+      if (task) {
+        evaluateDelayReasonVisibility(parseInt(val), task.dueDate);
+      }
+    }
+
+    function evaluateDelayReasonVisibility(progressValue, dueDate) {
+      const container = document.getElementById('delay-reason-container');
+      const isOverdue = dueDate < todayStr;
+      
+      // Mostrar si está atrasado y no está completo
+      if (isOverdue && progressValue < 100) {
+        container.classList.remove('hidden');
+        document.getElementById('report-delay-reason').required = true;
+      } else {
+        container.classList.add('hidden');
+        document.getElementById('report-delay-reason').required = false;
+      }
+    }
+
+    function handleReportProgress(e) {
+      e.preventDefault();
+      const progressInput = document.getElementById('report-progress').value;
+      const commentInput = document.getElementById('report-comment').value.trim();
+      const delayReasonInput = document.getElementById('report-delay-reason').value.trim();
+      const dateInput = document.getElementById('report-date').value;
+
+      if (!commentInput) return;
+
+      const progressVal = parseInt(progressInput);
+
+      tasks = tasks.map(task => {
+        if (task.id === taskIdToReport) {
+          const isOverdue = task.dueDate < todayStr;
+          
+          // Crear nuevo reporte para el historial
+          const newReport = {
+            id: 'h_rep_' + Date.now(),
+            date: dateInput,
+            progress: progressVal,
+            comment: commentInput,
+            delayReason: (isOverdue && progressVal < 100) ? delayReasonInput : ''
+          };
+
+          // Determinar nuevo estado basado en el porcentaje
+          let status = task.status;
+          let completedOnTime = task.completedOnTime;
+
+          if (progressVal === 100) {
+            status = 'completed';
+            completedOnTime = task.dueDate >= dateInput;
+          } else if (progressVal > 0) {
+            status = 'in_progress';
+            completedOnTime = null;
+          } else {
+            status = 'pending';
+            completedOnTime = null;
+          }
+
+          // Expandir por defecto el historial de esta tarea para ver el cambio reflejado
+          expandedTimelines[task.id] = true;
+
+          return {
+            ...task,
+            progress: progressVal,
+            status,
+            completedOnTime,
+            history: [...task.history, newReport]
+          };
+        }
+        return task;
+      });
+
+      closeModal('report-progress-modal');
+      triggerNotification('Reporte de avance e historial guardados correctamente.');
+      renderApp();
+    }
+
+    function toggleTimeline(taskId) {
+      expandedTimelines[taskId] = !expandedTimelines[taskId];
+      renderTaskList();
+    }
+
+    // --- FILTRADO ---
+    function applyFilters() {
+      filterMember = document.getElementById('filter-member').value;
+      filterStatus = document.getElementById('filter-status').value;
+      filterPriority = document.getElementById('filter-priority').value;
+
+      const resetButton = document.getElementById('reset-filters');
+      if (filterMember !== 'all' || filterStatus !== 'all' || filterPriority !== 'all') {
+        resetButton.classList.remove('hidden');
+      } else {
+        resetButton.classList.add('hidden');
+      }
+
+      renderTaskList();
+    }
+
+    function resetFilters() {
+      document.getElementById('filter-member').value = 'all';
+      document.getElementById('filter-status').value = 'all';
+      document.getElementById('filter-priority').value = 'all';
+      applyFilters();
+    }
+
+    // --- CONTROL DEL SELECTOR DE PROYECTOS EN CABECERA ---
+    function updateProjectSelector() {
+      const selector = document.getElementById('project-selector');
+      selector.innerHTML = '';
+      projects.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p.id;
+        option.textContent = p.name;
+        if (p.id === currentProjectId) {
+          option.selected = true;
+        }
+        selector.appendChild(option);
+      });
+    }
+
+    // Registrar listener del selector de proyecto
+    document.getElementById('project-selector').addEventListener('change', (e) => {
+      currentProjectId = e.target.value;
+      resetFilters();
+      renderApp();
+    });
+
+    // --- RENDERIZACIÓN DE VISTAS (PINTADO DINÁMICO CLARO) ---
+
+    function renderApp() {
+      const activeProject = projects.find(p => p.id === currentProjectId) || projects[0];
+      if (!activeProject) return;
+
+      // Actualizar Título y Descripción del Proyecto
+      document.getElementById('project-title').textContent = activeProject.name;
+      document.getElementById('project-desc').textContent = activeProject.description;
+
+      // Mostrar/Ocultar botón de eliminación de proyecto
+      const delBtn = document.getElementById('delete-project-btn');
+      if (projects.length > 1) {
+        delBtn.classList.remove('hidden');
+      } else {
+        delBtn.classList.add('hidden');
+      }
+
+      // Filtrar tareas por el proyecto actual
+      const projectTasks = tasks.filter(t => t.projectId === currentProjectId);
+
+      // --- CÁLCULO DE MÉTRICAS GENERALES ---
+      const total = projectTasks.length;
+      let averageProgress = 0;
+      let completedCount = 0;
+      let overdueCount = 0;
+
+      if (total > 0) {
+        // Progreso Ponderado es el promedio de porcentajes de progreso de todas las tareas
+        const sumProgress = projectTasks.reduce((sum, t) => sum + (t.progress || 0), 0);
+        averageProgress = Math.round(sumProgress / total);
+
+        // Tareas con 100% de cumplimiento
+        completedCount = projectTasks.filter(t => t.progress === 100).length;
+        
+        // Tareas retrasadas: fecha vencida y progreso menor a 100
+        overdueCount = projectTasks.filter(t => t.progress < 100 && t.dueDate < todayStr).length;
+      }
+
+      // Actualizar indicadores HTML
+      document.getElementById('metric-progress-text').textContent = `${averageProgress}%`;
+      document.getElementById('metric-progress-bar').style.width = `${averageProgress}%`;
+      document.getElementById('metric-overdue').textContent = overdueCount;
+      
+      const overdueIconBg = document.getElementById('metric-overdue-icon-bg');
+      const overdueText = document.getElementById('metric-overdue');
+      if (overdueCount > 0) {
+        overdueIconBg.className = 'p-3 rounded-xl bg-rose-50 text-rose-600 border border-rose-100/50';
+        overdueText.className = 'text-2xl font-extrabold text-rose-600 mt-1';
+      } else {
+        overdueIconBg.className = 'p-3 rounded-xl bg-slate-50 text-slate-550 border border-slate-100';
+        overdueText.className = 'text-2xl font-extrabold text-slate-800 mt-1';
+      }
+
+      document.getElementById('metric-completed').innerHTML = `${completedCount} <span class="text-xs text-slate-400 font-normal">/ ${total}</span>`;
+
+      // --- RENDERIZAR MIEMBROS & RENDIMIENTO ---
+      const membersGrid = document.getElementById('members-grid');
+      membersGrid.innerHTML = '';
+
+      members.forEach(member => {
+        const memberTasks = projectTasks.filter(t => t.assignedTo === member.id);
+        const mTotal = memberTasks.length;
+        const mCompleted = memberTasks.filter(t => t.progress === 100);
+        const mCompletedCount = mCompleted.length;
+        
+        // Tareas a tiempo de entrega
+        const mCompletedOnTime = mCompleted.filter(t => t.completedOnTime).length;
+        const mOverdueCount = memberTasks.filter(t => t.progress < 100 && t.dueDate < todayStr).length;
+
+        let complianceRate = 100;
+        if (mTotal > 0) {
+          const score = (mCompletedOnTime * 100 + (mCompletedCount - mCompletedOnTime) * 50) / mTotal;
+          complianceRate = Math.max(0, Math.round(score - (mOverdueCount * 10)));
+        }
+
+        // Estilos de cumplimiento suaves y claros
+        let complianceColor = 'text-rose-600';
+        let complianceBg = 'bg-rose-50 border-rose-100/70';
+        let barColor = 'bg-rose-500';
+
+        if (complianceRate >= 80) {
+          complianceColor = 'text-emerald-600';
+          complianceBg = 'bg-emerald-50/50 border-emerald-100/70';
+          barColor = 'bg-emerald-500';
+        } else if (complianceRate >= 50) {
+          complianceColor = 'text-amber-600';
+          complianceBg = 'bg-amber-50/50 border-amber-100/70';
+          barColor = 'bg-amber-500';
+        }
+
+        const memberCard = document.createElement('div');
+        memberCard.className = `p-5 rounded-2xl bg-white border flex flex-col justify-between transition-all hover:scale-[1.02] shadow-sm hover:shadow-md ${complianceBg} relative group`;
+        memberCard.innerHTML = `
+          <!-- Controles de Edición y Eliminación en Tarjeta -->
+          <div class="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button onclick="openEditMemberModal('${member.id}')" class="text-slate-400 hover:text-indigo-600 p-1 rounded-lg bg-white/95 border border-slate-100 shadow-sm transition" title="Editar integrante">
+              <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="openDeleteMemberModal('${member.id}')" class="text-slate-400 hover:text-rose-600 p-1 rounded-lg bg-white/95 border border-slate-100 shadow-sm transition" title="Quitar integrante">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+
+          <div>
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-xl ${member.color} flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                ${member.avatar}
+              </div>
+              <div class="overflow-hidden pr-8">
+                <h4 class="font-bold text-slate-800 text-sm truncate">${member.name}</h4>
+                <p class="text-xs text-slate-500 truncate font-semibold">${member.role}</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 mt-4 text-center border-t border-slate-100/80 pt-3">
+              <div>
+                <span class="block text-[10px] font-bold text-slate-400 uppercase">Asignadas</span>
+                <span class="text-sm font-bold text-slate-700">${mTotal}</span>
+              </div>
+              <div>
+                <span class="block text-[10px] font-bold text-slate-400 uppercase">Hechas</span>
+                <span class="text-sm font-bold text-emerald-600">${mCompletedCount}</span>
+              </div>
+              <div>
+                <span class="block text-[10px] font-bold text-slate-400 uppercase">Vencidas</span>
+                <span class="text-sm font-bold ${mOverdueCount > 0 ? 'text-rose-600' : 'text-slate-500'}">${mOverdueCount}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-5 pt-3 border-t border-slate-100/80">
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-xs font-bold text-slate-500">Cumplimiento</span>
+              <span class="text-sm font-extrabold ${complianceColor}">${complianceRate}%</span>
+            </div>
+            <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+              <div class="h-2 rounded-full transition-all duration-500 ${barColor}" style="width: ${complianceRate}%"></div>
+            </div>
+          </div>
+        `;
+        membersGrid.appendChild(memberCard);
+      });
+
+      // --- CONFIGURAR MODALES DINÁMICOS (SELECTORES) ---
+      const assignSelect = document.getElementById('new-task-assigned');
+      assignSelect.innerHTML = '<option value="">Seleccionar...</option>';
+      members.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.name;
+        assignSelect.appendChild(opt);
+      });
+
+      // --- REPOBULAR FILTRO DE RESPONSABLES ---
+      const filterMemSelect = document.getElementById('filter-member');
+      const savedValue = filterMemSelect.value;
+      filterMemSelect.innerHTML = '<option value="all">Todos los miembros</option>';
+      members.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.name;
+        if (m.id === savedValue) opt.selected = true;
+        filterMemSelect.appendChild(opt);
+      });
+
+      renderTaskList();
+      lucide.createIcons();
+    }
+
+    function renderTaskList() {
+      const projectTasks = tasks.filter(t => t.projectId === currentProjectId);
+      
+      // Aplicación de filtros
+      const filtered = projectTasks.filter(task => {
+        const matchMember = filterMember === 'all' || task.assignedTo === filterMember;
+        const matchStatus = filterStatus === 'all' || task.status === filterStatus;
+        const matchPriority = filterPriority === 'all' || task.priority === filterPriority;
+        return matchMember && matchStatus && matchPriority;
+      });
+
+      const container = document.getElementById('tasks-container');
+      container.innerHTML = '';
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <i data-lucide="check-square" class="w-12 h-12 text-slate-350 mx-auto mb-3"></i>
+            <p class="text-slate-500 font-bold text-sm">No se encontraron tareas con los filtros seleccionados.</p>
+            <p class="text-xs text-slate-400 mt-1">Prueba a crear una nueva tarea o cambiar los filtros.</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      const grid = document.createElement('div');
+      grid.className = 'grid grid-cols-1 lg:grid-cols-2 gap-6';
+
+      filtered.forEach(task => {
+        const assignee = members.find(m => m.id === task.assignedTo);
+        const isOverdue = task.progress < 100 && task.dueDate < todayStr;
+
+        // Clases de tarjetas de tareas claras y suaves
+        let borderClass = 'border-slate-200 bg-white';
+        if (task.progress === 100) borderClass = 'border-emerald-200 bg-emerald-50/40';
+        else if (isOverdue) borderClass = 'border-rose-200 bg-rose-50/40';
+
+        // Badges de prioridad claras
+        let priorityBadge = '';
+        if (task.priority === 'high') priorityBadge = '<span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-100">Prioridad Alta</span>';
+        else if (task.priority === 'medium') priorityBadge = '<span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100">Prioridad Media</span>';
+        else priorityBadge = '<span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">Prioridad Baja</span>';
+
+        // Badges de estado claras
+        let statusBadge = '';
+        if (task.progress === 100) statusBadge = '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Completada (100%)</span>';
+        else if (task.status === 'review') statusBadge = '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">En Revisión</span>';
+        else if (task.status === 'in_progress') statusBadge = `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700">En Progreso (${task.progress}%)</span>`;
+        else statusBadge = '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">Pendiente</span>';
+
+        // Control de estado de entrega (SLA)
+        let slaBadge = '';
+        if (isOverdue) {
+          slaBadge = '<span class="text-[10px] bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-bold flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i>Vencido</span>';
+        } else if (task.progress === 100) {
+          if (task.completedOnTime === false) {
+            slaBadge = '<span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3 h-3"></i>Fuera de Tiempo</span>';
+          } else if (task.completedOnTime === true) {
+            slaBadge = '<span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold flex items-center gap-1"><i data-lucide="check" class="w-3 h-3"></i>A Tiempo</span>';
+          }
+        }
+
+        // Renderizado del historial (Timeline claro) si se encuentra expandido
+        const isTimelineExpanded = expandedTimelines[task.id] || false;
+        let timelineHtml = '';
+
+        if (isTimelineExpanded) {
+          const histItems = task.history || [];
+          if (histItems.length === 0) {
+            timelineHtml = `
+              <div class="mt-4 pt-4 border-t border-slate-100 text-center text-xs text-slate-400 py-3 bg-slate-50 rounded-xl border border-slate-200/50">
+                Aún no hay reportes de avance registrados para esta tarea.
+              </div>
+            `;
+          } else {
+            // Generar la secuencia vertical de la línea de tiempo clara
+            let stepsHtml = '';
+            const sortedHist = [...histItems].reverse();
+
+            sortedHist.forEach((item, index) => {
+              const delayReport = item.delayReason ? `
+                <div class="mt-2 text-rose-700 bg-rose-50 border border-rose-100 p-2.5 rounded-xl text-[11px] flex items-start gap-1.5">
+                  <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-rose-500 flex-shrink-0 mt-0.5"></i>
+                  <div>
+                    <span class="font-bold block text-rose-600">Motivo de Retraso registrado:</span>
+                    ${item.delayReason}
+                  </div>
+                </div>
+              ` : '';
+
+              stepsHtml += `
+                <div class="relative pl-6 pb-4 last:pb-1">
+                  <!-- Indicador de nodo claro -->
+                  <div class="absolute -left-1.5 top-1 w-3.5 h-3.5 rounded-full ${item.progress === 100 ? 'bg-emerald-500' : 'bg-indigo-600'} border-2 border-white flex items-center justify-center shadow-sm">
+                    <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
+                  </div>
+                  <!-- Contenido del hito -->
+                  <div>
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                      <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">${item.progress}% de avance</span>
+                      <span class="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                        <i data-lucide="calendar" class="w-3 h-3 text-slate-300"></i> ${item.date}
+                      </span>
+                    </div>
+                    <p class="text-xs text-slate-600 mt-1.5 leading-relaxed italic">"${item.comment}"</p>
+                    ${delayReport}
+                  </div>
+                </div>
+              `;
+            });
+
+            timelineHtml = `
+              <div class="mt-4 pt-4 border-t border-slate-150">
+                <div class="flex items-center gap-1 text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                  <i data-lucide="git-commit" class="w-3.5 h-3.5 text-indigo-500"></i>
+                  <span>Línea de Tiempo de Avances (${histItems.length})</span>
+                </div>
+                <div class="relative border-l-2 border-slate-200 ml-2.5 space-y-1">
+                  ${stepsHtml}
+                </div>
+              </div>
+            `;
+          }
+        }
+
+        const taskCard = document.createElement('div');
+        taskCard.className = `p-5 rounded-2xl border transition-all flex flex-col justify-between hover:border-slate-350 hover:shadow-md ${borderClass}`;
+        taskCard.innerHTML = `
+          <div>
+            <!-- Header de Tarea: Badges y Eliminación -->
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2 flex-wrap">
+                ${priorityBadge}
+                ${statusBadge}
+                ${slaBadge}
+              </div>
+
+              <button onclick="deleteTask('${task.id}')" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-slate-100 transition" title="Eliminar tarea">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+
+            <!-- Título y Descripción -->
+            <h4 class="text-base font-bold text-slate-800 mb-1 ${task.progress === 100 ? 'line-through text-slate-400 font-medium' : ''}">
+              ${task.title}
+            </h4>
+            <p class="text-xs text-slate-500 mb-4 line-clamp-2">${task.description}</p>
+
+            <!-- Barra de Avance Porcentual de esta Tarea -->
+            <div class="mb-4 bg-slate-50 p-3 rounded-xl border border-slate-200/60">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-xs font-bold text-slate-500">Progreso individual</span>
+                <span class="text-xs font-extrabold text-indigo-600">${task.progress}%</span>
+              </div>
+              <div class="w-full bg-slate-200/80 h-2 rounded-full overflow-hidden">
+                <div class="h-2 rounded-full transition-all duration-500 ${task.progress === 100 ? 'bg-emerald-500' : 'bg-indigo-600'}" style="width: ${task.progress}%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Acciones de Avance, Responsable y Línea de Tiempo -->
+          <div class="border-t border-slate-100 pt-4 mt-auto space-y-4">
+            
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-medium">
+              <!-- Responsable y Calendario -->
+              <div class="flex items-center gap-3 flex-wrap">
+                ${assignee ? `
+                  <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg ${assignee.color} flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                      ${assignee.avatar}
+                    </div>
+                    <span class="text-xs text-slate-600 font-semibold">${assignee.name}</span>
+                  </div>
+                ` : `
+                  <div class="flex items-center gap-2 text-amber-600">
+                    <div class="w-7 h-7 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-xs font-bold">
+                      ?
+                    </div>
+                    <span class="text-xs font-bold">Sin asignar</span>
+                  </div>
+                `}
+
+                <div class="flex items-center gap-1.5 text-xs text-slate-400">
+                  <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-350"></i>
+                  <span class="${isOverdue ? 'text-rose-600 font-bold' : ''}">${task.dueDate}</span>
+                </div>
+              </div>
+
+              <!-- Menú de Estado Rápido -->
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] font-bold text-slate-400 uppercase mr-1">Estado:</span>
+                <select onchange="updateTaskStatus('${task.id}', this.value)" class="bg-white border border-slate-200 rounded-lg text-xs text-slate-600 px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer shadow-sm">
+                  <option value="pending" ${task.progress === 0 ? 'selected' : ''}>Pendiente</option>
+                  <option value="in_progress" ${task.progress > 0 && task.progress < 100 ? 'selected' : ''}>En Progreso</option>
+                  <option value="review" ${task.status === 'review' ? 'selected' : ''}>En Revisión</option>
+                  <option value="completed" ${task.progress === 100 ? 'selected' : ''}>Completar</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Botones Interactivos para Avances e Historial -->
+            <div class="flex items-center justify-between pt-1 border-t border-slate-100">
+              <button onclick="toggleTimeline('${task.id}')" class="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1.5 font-bold transition">
+                <i data-lucide="git-branch" class="w-4 h-4 text-indigo-500"></i>
+                <span>${isTimelineExpanded ? 'Ocultar Línea de Tiempo' : 'Ver Línea de Tiempo'} (${task.history ? task.history.length : 0})</span>
+              </button>
+
+              <button onclick="openReportProgressModal('${task.id}')" class="text-xs bg-indigo-50 hover:bg-indigo-600 text-indigo-650 hover:text-white px-3 py-1.5 rounded-lg border border-indigo-100 hover:border-indigo-600 transition flex items-center gap-1.5 font-bold shadow-sm">
+                <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i>
+                <span>Reportar Avance</span>
+              </button>
+            </div>
+
+            <!-- Inyección dinámica de la Línea de Tiempo de Cumplimiento -->
+            ${timelineHtml}
+
+          </div>
+        `;
+        grid.appendChild(taskCard);
+      });
+
+      container.appendChild(grid);
+      lucide.createIcons();
+    }
+
+    // --- CARGA E INICIALIZACIÓN DE LA APLICACIÓN ---
+    window.onload = function() {
+      updateProjectSelector();
+      renderApp();
+    };
+  </script>
+</body>
+</html>
